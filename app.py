@@ -7,17 +7,20 @@ from google.genai import types
 from PIL import Image
 from duckduckgo_search import DDGS
 
-# 1. UI BRANDING & INTERFACE SETUP
+# =====================================================================
+# 1. UI BRANDING & SYSTEM INITIALIZATION
+# =====================================================================
 st.set_page_config(page_title="NexusAI OS", page_icon="🌐", layout="centered")
 st.title("🌐 NexusAI OS")
 st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
-# Initialize Gemini Client (Uses your free Gemini API Key via Environment Secrets)
+# Initialize Gemini Client using your Environment Secret key
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     st.error("Deployment Error: Missing GEMINI_API_KEY in Environment Settings.")
     st.stop()
 
+# Supports both legacy 'AIzaSy' and new 'AQ.Ab' credential formats
 client = genai.Client(api_key=api_key)
 
 # Persistent chat state management
@@ -25,7 +28,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # =====================================================================
-# 2. THE PROPRIETARY CORE UTILITY TOOLS
+# 2. PROPRIETARY UTILITY TOOLSETS
 # =====================================================================
 
 def tool_web_search(query: str) -> str:
@@ -57,10 +60,10 @@ def tool_generate_image(prompt: str) -> Image.Image:
         return None
 
 # =====================================================================
-# 3. CHAT LOGIC AND INTENT ROUTING
+# 3. INTERFACE RENDERER & ROUTING LOGIC
 # =====================================================================
 
-# Draw user and AI history on page refresh
+# Draw historical logs on page refresh
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg.get("type") == "image":
@@ -68,13 +71,14 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# Process live user inputs
+# Process active user interactions
 if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'latest tech news')..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
     with st.chat_message("assistant"):
+        
         # Intent Check Type A: Image Synthesis requested
         if any(kw in user_input.lower() for kw in ["draw", "generate image", "create a picture of", "paint"]):
             st.info("🎨 Initializing Serverless Image Generation Engines...")
@@ -110,27 +114,29 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
             {context_data}
             """
             
-            # Format text-only conversation arrays for the Gemini SDK
+            # FIXED: Format conversation using native dict structures to satisfy 'AQ.' keys
             contents = []
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
-                    contents.append(
-                        types.Content(
-                            role="user" if msg["role"] == "user" else "model",
-                            parts=[types.Part.from_text(text=msg["content"])]
-                        )
-                    )
+                    contents.append({
+                        "role": "user" if msg["role"] == "user" else "model",
+                        "parts": [msg["content"]]
+                    })
 
-            # Query the model using your custom rules
-            response = client.models.generate_content(
-                model='gemini-1.5-flash',
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.3,
+            try:
+                # Query the model using your custom rule definitions
+                response = client.models.generate_content(
+                    model='gemini-1.5-flash',
+                    contents=contents,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.3,
+                    )
                 )
-            )
-            
-            ai_text = response.text
-            st.markdown(ai_text)
-            st.session_state.messages.append({"role": "assistant", "content": ai_text})
+                
+                ai_text = response.text
+                st.markdown(ai_text)
+                st.session_state.messages.append({"role": "assistant", "content": ai_text})
+                
+            except Exception as e:
+                st.error(f"Execution Error: {str(e)}")
