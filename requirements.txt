@@ -1,0 +1,5 @@
+google-genai
+streamlit
+duckduckgo-search
+requests
+pillow
