@@ -129,24 +129,27 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
                 st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
-            # Simplified System Prompt to avoid validation rejections
-            system_instruction = f"You are NexusAI, an advanced technical engine. Format with markdown lists. Live Web Context: {context_data}"
+            system_instruction = f"""You are NexusAI, an advanced technical engine. 
+Format outputs cleanly using markdown sections and lists. 
 
-            # RESTRUCTURED PATHWAY: Injects system identity directly inside the contents stream
-            # This completely bypasses the problematic config block validation on new keys
-            contents = [system_instruction]
+Live Web Search Context:
+{context_data}"""
+
+            # FIXED SDK CONVERSATION WRAPPER: Matches format needed for modern v1beta endpoints
+            contents = []
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
-                    contents.append(f"{msg['role']}: {msg['content']}")
-            
-            # Add the final instruction trigger
-            contents.append("model: Please process the last user conversation entry using your system rules.")
+                    contents.append({
+                        "role": "user" if msg["role"] == "user" else "model",
+                        "parts": [{"text": msg["content"]}]
+                    })
 
             try:
-                # Flat arguments structure optimized for raw token handshakes
+                # Execution call using the structured model payload
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=contents
+                    contents=contents,
+                    config={"system_instruction": system_instruction}
                 )
                 
                 ai_text = response.text
