@@ -3,7 +3,6 @@ import io
 import requests
 import streamlit as st
 from google import genai
-from google.genai import types
 from PIL import Image
 from duckduckgo_search import DDGS
 
@@ -14,13 +13,13 @@ st.set_page_config(page_title="NexusAI OS", page_icon="🌐", layout="centered")
 st.title("🌐 NexusAI OS")
 st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
-# Initialize Gemini Client using your Environment Secret key
+# Initialize Gemini Client securely using Environment Secrets
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("Deployment Error: Missing GEMINI_API_KEY in Environment Settings.")
+    st.error("🔑 Deployment Error: Missing GEMINI_API_KEY in Streamlit Advanced Settings.")
     st.stop()
 
-# Supports both legacy 'AIzaSy' and new 'AQ.Ab' credential formats
+# Initialize client wrapper (optimized for AQ. and AIzaSy key formats)
 client = genai.Client(api_key=api_key)
 
 # Persistent chat state management
@@ -28,7 +27,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # =====================================================================
-# 2. PROPRIETARY UTILITY TOOLSETS
+# 2. CORE UTILITY AGENCIES (Web Crawling & Image Gen)
 # =====================================================================
 
 def tool_web_search(query: str) -> str:
@@ -49,9 +48,7 @@ def tool_web_search(query: str) -> str:
 
 def tool_generate_image(prompt: str) -> Image.Image:
     """Generates visual assets dynamically using Hugging Face's serverless pipeline."""
-    # Free, open-source serverless community endpoint
     API_URL = "https://huggingface.co"
-    
     try:
         response = requests.post(API_URL, json={"inputs": prompt}, timeout=30)
         image = Image.open(io.BytesIO(response.content))
@@ -63,7 +60,7 @@ def tool_generate_image(prompt: str) -> Image.Image:
 # 3. INTERFACE RENDERER & ROUTING LOGIC
 # =====================================================================
 
-# Draw historical logs on page refresh
+# Display message history on state updates
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg.get("type") == "image":
@@ -71,7 +68,7 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# Process active user interactions
+# Handle active inputs from user
 if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'latest tech news')..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
@@ -79,7 +76,7 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
 
     with st.chat_message("assistant"):
         
-        # Intent Check Type A: Image Synthesis requested
+        # Action Block A: Image Synthesis
         if any(kw in user_input.lower() for kw in ["draw", "generate image", "create a picture of", "paint"]):
             st.info("🎨 Initializing Serverless Image Generation Engines...")
             generated_img = tool_generate_image(user_input)
@@ -95,43 +92,38 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
             else:
                 st.error("Failed to generate image. Please try another visual prompt.")
         
-        # Intent Check Type B: Text Processing & Live Web Crawling
+        # Action Block B: Text Processing & Live Web Crawling
         else:
             context_data = ""
-            # Automatically crawl the web if looking for fresh data
             if any(kw in user_input.lower() for kw in ["latest", "news", "current", "weather", "today", "search", "who is"]):
                 st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
-            # Formulate the custom model persona and inject live data context
-            system_instruction = f"""
-            You are NexusAI, an advanced autonomous OS engine. 
-            Tone: High-intelligence, highly technical, clinical, authoritative.
-            Behavior: Never say 'Sure, I can help!' or 'As an AI...'. State facts directly. 
-            Always format your answers using clean markdown titles, sections, and structural lists.
-            
-            Live Real-Time Web Context:
-            {context_data}
-            """
-            
-            # FIXED: Format conversation using native dict structures to satisfy 'AQ.' keys
+            # Base custom persona rules
+            system_instruction = f"""You are NexusAI, an advanced autonomous OS engine.
+Tone: High-intelligence, clinical, authoritative.
+Behavior: State facts directly without boilerplate conversational fluff or generic introductory statements.
+Format using clean markdown layout patterns.
+
+Live Real-Time Web Context:
+{context_data}
+"""
+
+            # Build direct native conversation dictionary list (Highly compatible with new API profiles)
             contents = []
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
                     contents.append({
                         "role": "user" if msg["role"] == "user" else "model",
-                        "parts": [msg["content"]]
+                        "parts": [{"text": msg["content"]}]
                     })
 
             try:
-                # Query the model using your custom rule definitions
+                # Direct API initialization call using native dictionary parameters
                 response = client.models.generate_content(
                     model='gemini-1.5-flash',
                     contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=0.3,
-                    )
+                    config={"system_instruction": system_instruction, "temperature": 0.3}
                 )
                 
                 ai_text = response.text
@@ -139,4 +131,7 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
                 st.session_state.messages.append({"role": "assistant", "content": ai_text})
                 
             except Exception as e:
-                st.error(f"Execution Error: {str(e)}")
+                st.error("⚠️ Server Exception Encountered")
+                st.info("If this persists, verify your GEMINI_API_KEY in the 'Secrets' dashboard has no typos, spaces, or stray quotes.")
+                with st.expander("Technical Trace Log"):
+                    st.code(str(e))
