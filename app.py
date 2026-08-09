@@ -7,9 +7,53 @@ from PIL import Image
 from duckduckgo_search import DDGS
 
 # =====================================================================
-# 1. UI BRANDING & SYSTEM INITIALIZATION
+# 1. PREMIUM CUSTOM FRONTEND INJECTION (HTML & CSS)
 # =====================================================================
 st.set_page_config(page_title="NexusAI OS", page_icon="🌐", layout="centered")
+
+# Custom CSS Stylesheet applied globally across the user interface
+CUSTOM_CSS = """
+<style>
+    /* Main container styling */
+    .stApp {
+        background-color: #0b0f19 !important;
+        color: #00ffcc !important;
+        font-family: 'Courier New', Courier, monospace !important;
+    }
+    
+    /* Top title adjustments */
+    h1 {
+        color: #ff007f !important;
+        text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
+        font-size: 2.8rem !important;
+        font-weight: bold;
+    }
+    
+    /* Chat message area custom styling */
+    .stChatMessage {
+        background-color: #121824 !important;
+        border: 1px solid #00ffcc !important;
+        border-radius: 8px !important;
+        box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
+        margin-bottom: 12px !important;
+        padding: 15px !important;
+    }
+    
+    /* Input box styling customization */
+    div[data-baseweb="input"] {
+        background-color: #1a2333 !important;
+        border: 1px solid #ff007f !important;
+        border-radius: 4px !important;
+    }
+    
+    input {
+        color: #00ffcc !important;
+    }
+</style>
+"""
+# Render the HTML/CSS template to the user's viewport
+st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+
 st.title("🌐 NexusAI OS")
 st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
@@ -19,10 +63,8 @@ if not api_key:
     st.error("🔑 Deployment Error: Missing GEMINI_API_KEY in Streamlit Advanced Settings.")
     st.stop()
 
-# Initialize client wrapper (optimized for AQ. and AIzaSy key formats)
 client = genai.Client(api_key=api_key)
 
-# Persistent chat state management
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -48,11 +90,9 @@ def tool_web_search(query: str) -> str:
 
 def tool_generate_image(prompt: str) -> Image.Image:
     """Generates visual assets dynamically using Hugging Face's serverless pipeline."""
-    # FIXED: Replaced root domain with the functional inference framework endpoint
     API_URL = "https://huggingface.co"
     try:
         response = requests.post(API_URL, json={"inputs": prompt}, timeout=30)
-        # Check if the server actually returned a valid image payload
         if response.status_code == 200:
             image = Image.open(io.BytesIO(response.content))
             return image
@@ -60,12 +100,10 @@ def tool_generate_image(prompt: str) -> Image.Image:
     except Exception:
         return None
 
-
 # =====================================================================
 # 3. INTERFACE RENDERER & ROUTING LOGIC
 # =====================================================================
 
-# Display message history on state updates
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg.get("type") == "image":
@@ -73,7 +111,6 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-# Handle active inputs from user
 if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'latest tech news')..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
@@ -81,7 +118,6 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
 
     with st.chat_message("assistant"):
         
-        # Action Block A: Image Synthesis
         if any(kw in user_input.lower() for kw in ["draw", "generate image", "create a picture of", "paint"]):
             st.info("🎨 Initializing Serverless Image Generation Engines...")
             generated_img = tool_generate_image(user_input)
@@ -97,14 +133,12 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
             else:
                 st.error("Failed to generate image. Please try another visual prompt.")
         
-        # Action Block B: Text Processing & Live Web Crawling
         else:
             context_data = ""
             if any(kw in user_input.lower() for kw in ["latest", "news", "current", "weather", "today", "search", "who is"]):
                 st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
-            # Base custom persona rules
             system_instruction = f"""You are NexusAI, an advanced autonomous OS engine.
 Tone: High-intelligence, clinical, authoritative.
 Behavior: State facts directly without boilerplate conversational fluff or generic introductory statements.
@@ -114,7 +148,6 @@ Live Real-Time Web Context:
 {context_data}
 """
 
-            # Build direct native conversation dictionary list (Highly compatible with new API profiles)
             contents = []
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
@@ -124,11 +157,11 @@ Live Real-Time Web Context:
                     })
 
             try:
-                # Direct API initialization call using native dictionary parameters
+                # FIXED: Removed 'temperature' argument to comply with strict AQ authentication endpoints
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=contents,
-                    config={"system_instruction": system_instruction, "temperature": 0.3}
+                    config={"system_instruction": system_instruction}
                 )
                 
                 ai_text = response.text
@@ -137,6 +170,5 @@ Live Real-Time Web Context:
                 
             except Exception as e:
                 st.error("⚠️ Server Exception Encountered")
-                st.info("If this persists, verify your GEMINI_API_KEY in the 'Secrets' dashboard has no typos, spaces, or stray quotes.")
                 with st.expander("Technical Trace Log"):
                     st.code(str(e))
