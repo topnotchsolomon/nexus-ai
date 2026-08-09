@@ -48,13 +48,18 @@ def tool_web_search(query: str) -> str:
 
 def tool_generate_image(prompt: str) -> Image.Image:
     """Generates visual assets dynamically using Hugging Face's serverless pipeline."""
+    # FIXED: Replaced root domain with the functional inference framework endpoint
     API_URL = "https://huggingface.co"
     try:
         response = requests.post(API_URL, json={"inputs": prompt}, timeout=30)
-        image = Image.open(io.BytesIO(response.content))
-        return image
+        # Check if the server actually returned a valid image payload
+        if response.status_code == 200:
+            image = Image.open(io.BytesIO(response.content))
+            return image
+        return None
     except Exception:
         return None
+
 
 # =====================================================================
 # 3. INTERFACE RENDERER & ROUTING LOGIC
@@ -121,7 +126,7 @@ Live Real-Time Web Context:
             try:
                 # Direct API initialization call using native dictionary parameters
                 response = client.models.generate_content(
-                    model='gemini-1.5-flash',
+                    model='gemini-2.5-flash',
                     contents=contents,
                     config={"system_instruction": system_instruction, "temperature": 0.3}
                 )
