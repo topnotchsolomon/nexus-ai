@@ -7,57 +7,47 @@ from PIL import Image
 from duckduckgo_search import DDGS
 
 # =====================================================================
-# 1. PREMIUM CUSTOM FRONTEND INJECTION (HTML & CSS)
+# 1. FRONTEND BRANDING OVERRIDES (RAW CSS INJECTION)
 # =====================================================================
 st.set_page_config(page_title="NexusAI OS", page_icon="🌐", layout="centered")
 
-# Custom CSS Stylesheet applied globally across the user interface
-CUSTOM_CSS = """
+CYBERPUNK_THEME = """
 <style>
-    /* Main container styling */
     .stApp {
-        background-color: #0b0f19 !important;
-        color: #00ffcc !important;
-        font-family: 'Courier New', Courier, monospace !important;
+        background-color: #0d1117 !important;
+        color: #58a6ff !important;
+        font-family: 'SF Mono', Consolas, 'Courier New', monospace !important;
     }
-    
-    /* Top title adjustments */
     h1 {
-        color: #ff007f !important;
-        text-shadow: 0 0 10px #ff007f, 0 0 20px #ff007f;
-        font-size: 2.8rem !important;
-        font-weight: bold;
+        color: #ff79c6 !important;
+        text-shadow: 0 0 12px rgba(255, 121, 198, 0.4);
+        font-weight: 800 !important;
     }
-    
-    /* Chat message area custom styling */
     .stChatMessage {
-        background-color: #121824 !important;
-        border: 1px solid #00ffcc !important;
-        border-radius: 8px !important;
-        box-shadow: 0 0 8px rgba(0, 255, 204, 0.2);
-        margin-bottom: 12px !important;
-        padding: 15px !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        margin-bottom: 14px !important;
     }
-    
-    /* Input box styling customization */
+    .stMarkdown {
+        color: #c9d1d9 !important;
+    }
     div[data-baseweb="input"] {
-        background-color: #1a2333 !important;
-        border: 1px solid #ff007f !important;
+        background-color: #21262d !important;
+        border: 1px solid #ff79c6 !important;
         border-radius: 4px !important;
     }
-    
     input {
-        color: #00ffcc !important;
+        color: #ff79c6 !important;
     }
 </style>
 """
-# Render the HTML/CSS template to the user's viewport
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+st.markdown(CYBERPUNK_THEME, unsafe_allow_html=True)
 
 st.title("🌐 NexusAI OS")
 st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
-# Initialize Gemini Client securely using Environment Secrets
 api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     st.error("🔑 Deployment Error: Missing GEMINI_API_KEY in Streamlit Advanced Settings.")
@@ -139,29 +129,24 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
                 st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
-            system_instruction = f"""You are NexusAI, an advanced autonomous OS engine.
-Tone: High-intelligence, clinical, authoritative.
-Behavior: State facts directly without boilerplate conversational fluff or generic introductory statements.
-Format using clean markdown layout patterns.
+            # Simplified System Prompt to avoid validation rejections
+            system_instruction = f"You are NexusAI, an advanced technical engine. Format with markdown lists. Live Web Context: {context_data}"
 
-Live Real-Time Web Context:
-{context_data}
-"""
-
-            contents = []
+            # RESTRUCTURED PATHWAY: Injects system identity directly inside the contents stream
+            # This completely bypasses the problematic config block validation on new keys
+            contents = [system_instruction]
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
-                    contents.append({
-                        "role": "user" if msg["role"] == "user" else "model",
-                        "parts": [{"text": msg["content"]}]
-                    })
+                    contents.append(f"{msg['role']}: {msg['content']}")
+            
+            # Add the final instruction trigger
+            contents.append("model: Please process the last user conversation entry using your system rules.")
 
             try:
-                # FIXED: Removed 'temperature' argument to comply with strict AQ authentication endpoints
+                # Flat arguments structure optimized for raw token handshakes
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=contents,
-                    config={"system_instruction": system_instruction}
+                    contents=contents
                 )
                 
                 ai_text = response.text
