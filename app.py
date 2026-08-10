@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 from google import genai
 from PIL import Image
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 # =====================================================================
 # 1. FRONTEND BRANDING OVERRIDES (RAW CSS INJECTION)
