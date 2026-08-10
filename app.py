@@ -2,7 +2,7 @@ import os
 import io
 import requests
 import streamlit as st
-from google import genai
+from groq import Groq  # 🛠️ Swapped from Google GenAI
 from PIL import Image
 from ddgs import DDGS
 
@@ -48,12 +48,14 @@ st.markdown(CYBERPUNK_THEME, unsafe_allow_html=True)
 st.title("🌐 NexusAI OS")
 st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
-api_key = os.environ.get("GEMINI_API_KEY")
+# 🛠️ Read Groq API Key from Streamlit Secrets or environment variables
+api_key = os.environ.get("GROQ_API_KEY")
 if not api_key:
-    st.error("🔑 Deployment Error: Missing GEMINI_API_KEY in Streamlit Advanced Settings.")
+    st.error("🔑 Deployment Error: Missing GROQ_API_KEY in Streamlit Advanced Settings.")
     st.stop()
 
-client = genai.Client(api_key=api_key)
+# 🛠️ Initialize Groq Client
+client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -80,9 +82,11 @@ def tool_web_search(query: str) -> str:
 
 def tool_generate_image(prompt: str) -> Image.Image:
     """Generates visual assets dynamically using Hugging Face's serverless pipeline."""
-    API_URL = "https://huggingface.co"
+    # 📝 Note: Make sure to replace this URL or add your specific HF inference endpoint token if needed
+    API_URL = "https://huggingface.co" 
+    headers = {"Authorization": f"Bearer {os.environ.get('HF_TOKEN', '')}"}
     try:
-        response = requests.post(API_URL, json={"inputs": prompt}, timeout=30)
+        response = requests.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=30)
         if response.status_code == 200:
             image = Image.open(io.BytesIO(response.content))
             return image
@@ -129,30 +133,28 @@ if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'la
                 st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
-            system_instruction = f"""You are NexusAI, an advanced technical engine. 
-Format outputs cleanly using markdown sections and lists. 
+            # 🛠️ System instruction formatted as a persistent system role message for Groq
+            messages = [{
+                "role": "system",
+                "content": f"You are NexusAI, an advanced technical engine. Format outputs cleanly using markdown sections and lists.\n\nLive Web Search Context:\n{context_data}"
+            }]
 
-Live Web Search Context:
-{context_data}"""
-
-            # FIXED SDK CONVERSATION WRAPPER: Matches format needed for modern v1beta endpoints
-            contents = []
+            # 🛠️ Format chat history conversion perfectly to match OpenAI/Groq standard chat structures
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
-                    contents.append({
-                        "role": "user" if msg["role"] == "user" else "model",
-                        "parts": [{"text": msg["content"]}]
+                    messages.append({
+                        "role": "user" if msg["role"] == "user" else "assistant",
+                        "content": msg["content"]
                     })
 
             try:
-                # Execution call using the structured model payload
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=contents,
-                    config={"system_instruction": system_instruction}
+                # 🛠️ Execution call via Groq API utilizing Llama-3.3-70b
+                response = client.chat.completions.create(
+                    model='llama-3.3-70b-versatile',
+                    messages=messages
                 )
                 
-                ai_text = response.text
+                ai_text = response.choices[0].message.content
                 st.markdown(ai_text)
                 st.session_state.messages.append({"role": "assistant", "content": ai_text})
                 
