@@ -3,3 +3,4 @@ groq
 scikit-learn
 joblib
 ddgs
+requests
