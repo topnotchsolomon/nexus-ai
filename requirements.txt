@@ -1,3 +1,4 @@
-googstreamlit
+streamlit
+google-genai
 scikit-learn
 joblib
