@@ -2,82 +2,59 @@ import os
 import io
 import requests
 import streamlit as st
-from groq import Groq
+from groq import Groq  # 🛠️ Swapped from Google GenAI
 from PIL import Image
 from ddgs import DDGS
 
 # =====================================================================
-# 1. FRONTEND BRANDING OVERRIDES (CLAUDE-INSPIRED MINIMALIST THEME)
+# 1. FRONTEND BRANDING OVERRIDES (RAW CSS INJECTION)
 # =====================================================================
 st.set_page_config(page_title="NexusAI OS", page_icon="🌐", layout="centered")
 
-CLAUDE_THEME = """
+CYBERPUNK_THEME = """
 <style>
-    /* Main background - warm, clean minimalist vibe */
     .stApp {
-        background-color: #f9f6f0 !important;
-        color: #191919 !important;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+        background-color: #0d1117 !important;
+        color: #58a6ff !important;
+        font-family: 'SF Mono', Consolas, 'Courier New', monospace !important;
     }
-    
-    /* Clean, understated header */
     h1 {
-        color: #191919 !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.5px;
+        color: #ff79c6 !important;
+        text-shadow: 0 0 12px rgba(255, 121, 198, 0.4);
+        font-weight: 800 !important;
     }
-    
-    .stCaption {
-        color: #6b6b6b !important;
-    }
-    
-    /* Claude-style chat bubble layouts */
     .stChatMessage {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 1rem 0 !important;
-        margin-bottom: 0px !important;
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        margin-bottom: 14px !important;
     }
-    
-    /* Assistant response background wrapper */
-    div[data-testid="stChatMessageContent"] {
-        color: #191919 !important;
-        font-size: 1.05rem !important;
-        line-height: 1.6 !important;
+    .stMarkdown {
+        color: #c9d1d9 !important;
     }
-    
-    /* Refined, borderless look for input box */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important;
-        border: 1px solid #e5e5e0 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        background-color: #21262d !important;
+        border: 1px solid #ff79c6 !important;
+        border-radius: 4px !important;
     }
-    
     input {
-        color: #191919 !important;
-    }
-    
-    /* Clean up helper elements */
-    .stInfo, .stError {
-        border-radius: 8px !important;
-        background-color: #f0ede6 !important;
-        color: #191919 !important;
-        border: none !important;
+        color: #ff79c6 !important;
     }
 </style>
 """
-st.markdown(CLAUDE_THEME, unsafe_allow_html=True)
+st.markdown(CYBERPUNK_THEME, unsafe_allow_html=True)
 
 st.title("🌐 NexusAI OS")
-st.caption("A clean, minimalist platform with live web crawling and synthesis tools.")
+st.caption("Custom Agent Platform with Live Web Crawling & Image Synthesis Tools")
 
-# Read Groq API Key
+# 🛠️ Read Groq API Key from Streamlit Secrets or environment variables
 api_key = os.environ.get("GROQ_API_KEY")
 if not api_key:
     st.error("🔑 Deployment Error: Missing GROQ_API_KEY in Streamlit Advanced Settings.")
     st.stop()
 
+# 🛠️ Initialize Groq Client
 client = Groq(api_key=api_key)
 
 if "messages" not in st.session_state:
@@ -105,6 +82,7 @@ def tool_web_search(query: str) -> str:
 
 def tool_generate_image(prompt: str) -> Image.Image:
     """Generates visual assets dynamically using Hugging Face's serverless pipeline."""
+    # 📝 Note: Make sure to replace this URL or add your specific HF inference endpoint token if needed
     API_URL = "https://huggingface.co" 
     headers = {"Authorization": f"Bearer {os.environ.get('HF_TOKEN', '')}"}
     try:
@@ -120,7 +98,6 @@ def tool_generate_image(prompt: str) -> Image.Image:
 # 3. INTERFACE RENDERER & ROUTING LOGIC
 # =====================================================================
 
-# Render conversational interface smoothly without box borders
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         if msg.get("type") == "image":
@@ -128,7 +105,7 @@ for msg in st.session_state.messages:
         else:
             st.markdown(msg["content"])
 
-if user_input := st.chat_input("Ask NexusAI anything..."):
+if user_input := st.chat_input("Command NexusAI (e.g., 'draw a neon city' or 'latest tech news')..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -136,11 +113,11 @@ if user_input := st.chat_input("Ask NexusAI anything..."):
     with st.chat_message("assistant"):
         
         if any(kw in user_input.lower() for kw in ["draw", "generate image", "create a picture of", "paint"]):
-            st.info("🎨 Generating visual asset...")
+            st.info("🎨 Initializing Serverless Image Generation Engines...")
             generated_img = tool_generate_image(user_input)
             
             if generated_img:
-                st.image(generated_img, caption=f"Generated asset: '{user_input}'")
+                st.image(generated_img, caption=f"Synthesized by NexusAI Engine: '{user_input}'")
                 st.session_state.messages.append({
                     "role": "assistant", 
                     "type": "image", 
@@ -153,14 +130,16 @@ if user_input := st.chat_input("Ask NexusAI anything..."):
         else:
             context_data = ""
             if any(kw in user_input.lower() for kw in ["latest", "news", "current", "weather", "today", "search", "who is"]):
-                st.info("🔍 Reviewing live web data...")
+                st.info("🔍 Initializing Autonomous Web Crawler...")
                 context_data = tool_web_search(user_input)
             
+            # 🛠️ System instruction formatted as a persistent system role message for Groq
             messages = [{
                 "role": "system",
-                "content": f"You are NexusAI, a thoughtful, helpful, and highly clear technical assistant. Format outputs beautifully using markdown. Avoid overly robotic phrases.\n\nLive Web Search Context:\n{context_data}"
+                "content": f"You are NexusAI, an advanced technical engine. Format outputs cleanly using markdown sections and lists.\n\nLive Web Search Context:\n{context_data}"
             }]
 
+            # 🛠️ Format chat history conversion perfectly to match OpenAI/Groq standard chat structures
             for msg in st.session_state.messages:
                 if msg.get("type") != "image":
                     messages.append({
@@ -169,16 +148,17 @@ if user_input := st.chat_input("Ask NexusAI anything..."):
                     })
 
             try:
+                # 🛠️ Execution call via Groq API utilizing Llama-3.3-70b
                 response = client.chat.completions.create(
                     model='llama-3.3-70b-versatile',
                     messages=messages
                 )
                 
-                ai_text = response.choices.message.content
+                ai_text = response.choices[0].message.content
                 st.markdown(ai_text)
                 st.session_state.messages.append({"role": "assistant", "content": ai_text})
                 
             except Exception as e:
-                st.error("⚠️ An unexpected server exception occurred.")
+                st.error("⚠️ Server Exception Encountered")
                 with st.expander("Technical Trace Log"):
                     st.code(str(e))
